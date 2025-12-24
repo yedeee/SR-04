@@ -3,38 +3,117 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
         html, body {
-            margin: 0; padding: 0; background-color: #000 !important; color: #fff;
-            font-family: 'Courier New', Courier, monospace;
+            margin: 0; padding: 0; 
+            background-color: #000 !important; 
+            color: #fff;
+            /* Updated to Courier Prime */
+            font-family: 'Courier Prime', 'Courier New', Courier, monospace;
         }
-        body { display: flex; flex-direction: column; align-items: center; padding: 20px; min-height: 100vh; }
-        .header-fixed { position: sticky; top: 0; background: #000; width: 100%; padding: 20px 0; z-index: 100; display: flex; justify-content: center; }
+
+        body { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            padding: 0 20px; /* Removed top padding from body */
+            min-height: 100vh; 
+        }
+
+        /* Compact Header with minimal spacing */
+        .header-fixed { 
+            position: sticky; 
+            top: 0; 
+            background: #000; 
+            width: 100%; 
+            padding: 10px 0; /* Tightened from 20px */
+            z-index: 100; 
+            display: flex; 
+            justify-content: center; 
+        }
+
         #query {
-            width: 100%; max-width: 500px; background: transparent; border: 2px solid #fff; 
-            border-radius: 50px; padding: 12px 25px; color: #fff; font-family: inherit; 
-            font-size: 1.1rem; text-align: center; text-transform: uppercase; outline: none;
+            width: 100%; 
+            max-width: 500px; 
+            background: transparent; 
+            border: 1px solid #fff; /* 1px Brutalist border */
+            border-radius: 50px; 
+            padding: 10px 25px; 
+            color: #fff; 
+            font-family: inherit; 
+            font-size: 1rem; 
+            text-align: center; 
+            text-transform: uppercase; 
+            outline: none;
+            letter-spacing: 1px;
         }
-        #results-list { width: 100%; max-width: 600px; margin-top: 10px; }
-        .result-item { text-decoration: none; color: #fff; display: block; padding: 18px 0; border-bottom: 1px dashed #333; }
-        .result-title { font-size: 1.1rem; font-weight: 900; text-transform: uppercase; display: block; }
-        .result-url { font-size: 0.7rem; color: #555; display: block; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        #status { font-size: 0.6rem; text-transform: uppercase; color: #444; position: fixed; bottom: 10px; letter-spacing: 2px; background: #000; padding: 2px 10px; z-index: 101; }
+
+        #results-list { 
+            width: 100%; 
+            max-width: 600px; 
+            margin-top: 5px; 
+        }
+
+        .result-item { 
+            text-decoration: none; 
+            color: #fff; 
+            display: block; 
+            padding: 15px 0; 
+            border-bottom: 1px dashed #222; 
+        }
+
+        .result-title { 
+            font-size: 1rem; 
+            font-weight: 700; 
+            text-transform: uppercase; 
+            display: block; 
+            line-height: 1.2;
+        }
+
+        .result-url { 
+            font-size: 0.65rem; 
+            color: #555; 
+            display: block; 
+            margin-top: 4px; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            white-space: nowrap; 
+        }
+
+        #status { 
+            font-size: 0.6rem; 
+            text-transform: uppercase; 
+            color: #444; 
+            position: fixed; 
+            bottom: 10px; 
+            left: 20px;
+            letter-spacing: 2px; 
+            background: #000; 
+            padding: 2px 5px; 
+            z-index: 101; 
+        }
     </style>
 </head>
 <body>
     <div class="header-fixed">
-        <input type="text" id="query" placeholder="SR-03_QUAD_ENGINE_INPUT" autocomplete="off">
+        <input type="text" id="query" placeholder="SR-03_QUAD_INPUT" autocomplete="off">
     </div>
+    
     <div id="results-list"></div>
+    
     <div id="status">UPLINK_READY</div>
 
     <script>
         // --- CONFIG ---
         const GOOGLE_KEY = 'AIzaSyBG568ADVNeQmZRsn1ukr84WJmfluxX9eQ'; 
         const GOOGLE_CX = '6497aff1338474699'; 
-        const SEARX_INSTANCE = 'https://searx.be'; // You can swap this for any working SearXNG instance
+        const SEARX_INSTANCE = 'https://searx.be'; 
 
         const queryInput = document.getElementById('query');
         const resultsContainer = document.getElementById('results-list');
@@ -101,11 +180,11 @@
             } catch (e) { console.log("DDG Offline"); }
 
             // --- 4. REDIRECT (FINAL FALLBACK) ---
-            statusText.innerText = 'ALL_ENGINES_OFFLINE_REDIRECTING...';
+            statusText.innerText = 'FALLBACK_REDIRECT...';
             pulse();
             setTimeout(() => {
                 window.location.href = `https://duckduckgo.com/?q=${encodeURIComponent(cleanQuery)}`;
-            }, 1000);
+            }, 800);
         }
 
         function finalize(q, items, auto) {
