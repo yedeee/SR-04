@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body {
+            margin: 0; padding: 0; background-color: #000 !important; color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        body { display: flex; flex-direction: column; align-items: center; padding: 20px; min-height: 100vh; }
+        .header-fixed { position: sticky; top: 0; background: #000; width: 100%; padding: 20px 0; z-index: 100; display: flex; justify-content: center; }
+        #query {
+            width: 100%; max-width: 500px; background: transparent; border: 2px solid #fff; 
+            border-radius: 50px; padding: 12px 25px; color: #fff; font-family: inherit; 
+            font-size: 1.1rem; text-align: center; text-transform: uppercase; outline: none;
+        }
+        #results-list { width: 100%; max-width: 600px; margin-top: 10px; }
+        .result-item { text-decoration: none; color: #fff; display: block; padding: 18px 0; border-bottom: 1px dashed #333; }
+        .result-title { font-size: 1.1rem; font-weight: 900; text-transform: uppercase; display: block; }
+        .result-url { font-size: 0.7rem; color: #555; display: block; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        #status { font-size: 0.6rem; text-transform: uppercase; color: #444; position: fixed; bottom: 10px; letter-spacing: 2px; background: #000; padding: 2px 10px; z-index: 101; }
+    </style>
+</head>
+<body>
+    <div class="header-fixed">
+        <input type="text" id="query" placeholder="SR-03_QUAD_ENGINE_INPUT" autocomplete="off">
+    </div>
+    <div id="results-list"></div>
+    <div id="status">UPLINK_READY</div>
+
+    <script>
+        // --- CONFIG ---
+        const GOOGLE_KEY = 'AIzaSyBG568ADVNeQmZRsn1ukr84WJmfluxX9eQ'; 
+        const GOOGLE_CX = '6497aff1338474699'; 
+        const SEARX_INSTANCE = 'https://searx.be'; // You can swap this for any working SearXNG instance
+
+        const queryInput = document.getElementById('query');
+        const resultsContainer = document.getElementById('results-list');
+        const statusText = document.getElementById('status');
+
+        queryInput.addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter' && queryInput.value.trim() !== '') {
+                executeWaterfall(queryInput.value.trim());
+                queryInput.value = '';
+                queryInput.blur();
+            }
+        });
+
+        function pulse() { if (navigator.vibrate) navigator.vibrate(40); }
+
+        async function executeWaterfall(q) {
+            resultsContainer.innerHTML = '';
+            const lowerQ = q.toLowerCase();
+            
+            if (lowerQ === '[random]') {
+                window.location.href = "https://en.wikipedia.org/wiki/Special:Random";
+                return;
+            }
+
+            const isAutoOpen = lowerQ.startsWith('[zz]');
+            const cleanQuery = isAutoOpen ? q.substring(4).trim() : q;
+
+            // --- 1. SEARXNG (MAIN) ---
+            statusText.innerText = 'UPLINK_1:SEARXNG...';
+            try {
+                const res = await fetch(`${SEARX_INSTANCE}/search?q=${encodeURIComponent(cleanQuery)}&format=json`);
+                const data = await res.json();
+                if (data.results && data.results.length > 0) {
+                    finalize(cleanQuery, data.results.map(r => ({title: r.title, url: r.url})), isAutoOpen);
+                    return;
+                }
+            } catch (e) { console.log("SearXNG Offline"); }
+
+            // --- 2. GOOGLE API (SECONDARY) ---
+            statusText.innerText = 'UPLINK_2:GOOGLE...';
+            try {
+                const res = await fetch(`https://www.googleapis.com/customsearch/v1?key=${GOOGLE_KEY}&cx=${GOOGLE_CX}&q=${encodeURIComponent(cleanQuery)}&num=10`);
+                const data = await res.json();
+                if (data.items) {
+                    finalize(cleanQuery, data.items.map(i => ({title: i.title, url: i.link})), isAutoOpen);
+                    return;
+                }
+            } catch (e) { console.log("Google Offline"); }
+
+            // --- 3. DUCKDUCKGO (TERTIARY) ---
+            statusText.innerText = 'UPLINK_3:DDG...';
+            try {
+                const res = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(cleanQuery)}&format=json&no_html=1`);
+                const data = await res.json();
+                let ddgResults = [];
+                if (data.AbstractURL) ddgResults.push({title: data.Heading, url: data.AbstractURL});
+                if (data.RelatedTopics) {
+                    data.RelatedTopics.slice(0, 5).forEach(t => { if (t.FirstURL) ddgResults.push({title: t.Text, url: t.FirstURL}); });
+                }
+                if (ddgResults.length > 0) {
+                    finalize(cleanQuery, ddgResults, isAutoOpen);
+                    return;
+                }
+            } catch (e) { console.log("DDG Offline"); }
+
+            // --- 4. REDIRECT (FINAL FALLBACK) ---
+            statusText.innerText = 'ALL_ENGINES_OFFLINE_REDIRECTING...';
+            pulse();
+            setTimeout(() => {
+                window.location.href = `https://duckduckgo.com/?q=${encodeURIComponent(cleanQuery)}`;
+            }, 1000);
+        }
+
+        function finalize(q, items, auto) {
+            if (auto) {
+                pulse();
+                window.location.href = items[0].url;
+            } else {
+                resultsContainer.innerHTML = items.map(item => `
+                    <a href="${item.url}" class="result-item">
+                        <span class="result-title">${item.title.toUpperCase()}</span>
+                        <span class="result-url">${item.url}</span>
+                    </a>`).join('');
+                statusText.innerText = 'SIGNAL_LOCKED';
+            }
+        }
+    </script>
+</body>
+</html>
